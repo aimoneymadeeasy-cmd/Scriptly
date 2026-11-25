@@ -1,4 +1,3 @@
-// Runs on Vercel's servers, never in the visitor's browser. Your key stays private here.
 const LENGTHS = [["1–2 min", 300], ["5 min", 750], ["10 min", 1500], ["15 min", 2250]];
 
 module.exports = async function handler(req, res) {
@@ -10,6 +9,10 @@ module.exports = async function handler(req, res) {
   }
   if (!idea || typeof idea !== "string" || idea.length > 2000) {
     return res.status(400).json({ error: "Please enter a video idea (under 2000 characters)." });
+  }
+  const key = (process.env.ANTHROPIC_API_KEY || "").trim();
+  if (!key) {
+    return res.status(500).json({ error: "STEP 4 PROBLEM: Vercel has no ANTHROPIC_API_KEY. Add it in Settings, then Environment Variables, then Redeploy." });
   }
   const L = LENGTHS[Number(lengthIdx)] || LENGTHS[1];
 
@@ -38,7 +41,7 @@ Rules: write what the creator says out loud, speak directly to the audience, kee
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "x-api-key": key,
       "anthropic-version": "2023-06-01",
       "content-type": "application/json",
     },
@@ -49,7 +52,10 @@ Rules: write what the creator says out loud, speak directly to the audience, kee
       messages: [{ role: "user", content: prompt }],
     }),
   });
-  if (!r.ok) { const t = await r.text(); return res.status(502).json({ error: "AI service error " + r.status + ": " + t.slice(0, 300) }); }
+  if (!r.ok) {
+    const t = await r.text();
+    return res.status(502).json({ error: "Anthropic said (" + r.status + "): " + t.slice(0, 300) });
+  }
 
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
