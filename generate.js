@@ -49,7 +49,7 @@ Rules: write what the creator says out loud, speak directly to the audience, kee
       messages: [{ role: "user", content: prompt }],
     }),
   });
-  if (!r.ok) return res.status(502).json({ error: "The AI service had a problem. Try again in a moment." });
+  if (!r.ok) { const t = await r.text(); return res.status(502).json({ error: "AI service error " + r.status + ": " + t.slice(0, 300) }); }
 
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
